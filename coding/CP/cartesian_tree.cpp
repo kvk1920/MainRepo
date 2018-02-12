@@ -20,6 +20,7 @@ void merge(treap L, treap R, treap &T)
 	if (!L or !R) { T = L ? L : R; return; }
 	if (L->y > R->y) { T = L; merge(T->R, R, T->R); }
 	else { T = R; merge(L, T->L, T->L); }
+	recalc(T);
 }
 
 void split(treap T, treap &L, treap &R, int key)
@@ -27,6 +28,7 @@ void split(treap T, treap &L, treap &R, int key)
 	if (!T) { L = R = 0; return; }
 	if (T->key < key) { L = T; split(T->R, T->R, R, key); }
 	else { R = T; split(T->L, L, T->L, key); }
+	recalc(L), recalc(R);
 }
 
 int main()
