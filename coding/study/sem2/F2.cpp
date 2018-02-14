@@ -1,6 +1,10 @@
 #include <iostream>
 #include <algorithm>
 #include <cstdlib>
+#include <cassert>
+#include <map>
+
+//#define DEBUG_MODE
 
 namespace cartesian_tree
 {
@@ -54,6 +58,7 @@ namespace cartesian_tree
 			linc = rinc = sz;
 			ldec = rdec = sz;
 			add = 0;
+			assign = true;
 		}
 
 		void push()
@@ -105,8 +110,8 @@ namespace cartesian_tree
 			linc = ldec = 1;
 			if (left)
 			{
-				linc = left->linc + left->rval <= val;
-				ldec = left->ldec + left->rval >= val;
+				linc = left->linc + (left->rval <= val);
+				ldec = left->ldec + (left->rval >= val);
 			}
 			if (right)
 			{
@@ -120,8 +125,8 @@ namespace cartesian_tree
 			rinc = rdec = 1;
 			if (right)
 			{
-				rinc = right->rinc + right->lval >= val;
-				ldec = right->rdec + right->lval <= val;
+				rinc = right->rinc + (right->lval >= val);
+				rdec = right->rdec + (right->lval <= val);
 			}
 			if (left)
 			{
@@ -143,11 +148,13 @@ namespace cartesian_tree
 		int ldec, rdec;
 		bool assign, rev;
 		*/
+
+		void dbg_output() const;
 	};
 
 	typedef node *treap;
 
-	struct alloc_type{ //naive memory manager
+	/*struct alloc_type{ //naive memory manager
 		node *buff;
 		int nxtfr; //next free block
 		alloc_type()
@@ -164,7 +171,7 @@ namespace cartesian_tree
 			buff[nxtfr] = node(x);
 			return &buff[nxtfr++];
 		}
-	} mem_alloc;
+	} mem_alloc;*/
 
 	int sz(treap T) { return T ? T->sz : 0; }
 
@@ -236,7 +243,7 @@ namespace cartesian_tree
 	{
 		treap L, R;
 		split(T, L, R, pos - 1);
-		merge(L, mem_alloc.get_new_node(x), R, T);
+		merge(L, new node(x) /*mem_alloc.get_new_node(x)*/, R, T);
 	}
 
 	inline void erase_query(treap &T, int pos)
@@ -314,7 +321,7 @@ namespace cartesian_tree
 		int i(sz(T) - T->rinc);
 		treap A, B, C;
 		split(T, A, B, C, i, i);
-		int j(find_greater(C, B->val));
+		int j(find_less(C, B->val));
 		swap(B, C, j);
 		C->upd_rev();
 		merge(A, B, C, T);
@@ -341,6 +348,49 @@ namespace cartesian_tree
 		}
 		if (t == 1) std::cout << res << '\n';
 	}
+
+	namespace ptr_writer {
+		std::map <treap, int> dict;
+		int counter = 1;
+		std::ostream &operator<<(std::ostream &out, const treap &t)
+		{
+			if (!dict.count(t))
+				dict[t] = counter++;
+			return out << dict[t];
+		}
+	}
+
+#define dbg(a) std::cerr << #a << " = " << a << std::endl
+	void node::dbg_output() const {
+		using namespace ptr_writer;
+		std::cerr << "-------------\n";
+		dbg((node *)this);
+		dbg(left);
+		dbg(right);
+		dbg(sz);
+		dbg(val);
+		dbg(lval);
+		dbg(rval);
+		dbg(sum);
+		dbg(linc);
+		dbg(rinc);
+		dbg(ldec);
+		dbg(rdec);
+		std::cerr << "-------------\n";
+	}
+#undef dbg
+
+	void print(treap T)
+	{
+		if (!T) return;
+		T->push();
+#ifdef DEBUG_MODE
+		T->dbg_output();
+#endif
+		print(T->left);
+		std::cout << T->val << ' ';
+		print(T->right);
+	}
 }
 
 int main()
@@ -348,8 +398,12 @@ int main()
 	using namespace std;
 	using cartesian_tree::query;
 	using cartesian_tree::node;
-	using cartesian_tree::mem_alloc;
-	freopen("input.txt", "r", stdin);
+	//using cartesian_tree::mem_alloc;
+	using cartesian_tree::print;
+	//freopen("input.txt", "r", stdin);
+#ifdef DEBUG_MODE
+	freopen("debug", "w", stderr);
+#endif
 	ios_base::sync_with_stdio(false);
 	cin.tie(0);
 	cout.tie(0);
@@ -359,7 +413,7 @@ int main()
 	for (int a; n; --n)
 	{
 		cin >> a;
-		query(root, 2, root->sz + 1, 0, 0, a);
+		query(root, 2, (root ? root->sz : 0) + 1, 0, 0, a);
 	}
 	int q; cin >> q;
 	while (q--)
@@ -369,9 +423,15 @@ int main()
 		cin >> t;
 		if (t == 2) cin >> x >> pos;
 		else if (t == 3) cin >> pos;
-		else if (x == 4 || x == 5) cin >> x >> l >> r;
+		else if (t == 4 || t == 5) cin >> x >> l >> r;
 		else cin >> l >> r;
 		query(root, t, pos, l, r, x);
+#ifdef DEBUG_MODE
+		print(root);
+		cerr << "================\n";
+		cout << endl;
+#endif
 	}
+	print(root);
 	return 0;
 }
