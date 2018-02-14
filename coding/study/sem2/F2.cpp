@@ -4,7 +4,7 @@
 #include <cassert>
 #include <map>
 
-//#define DEBUG_MODE
+#define DEBUG_MODE
 
 namespace cartesian_tree
 {
@@ -44,10 +44,6 @@ namespace cartesian_tree
 
 		void upd_rev()
 		{
-			std::swap(left, right);
-			std::swap(lval, rval);
-			std::swap(linc, rinc);
-			std::swap(ldec, rdec);
 			rev ^= 1;
 		}
 
@@ -73,6 +69,10 @@ namespace cartesian_tree
 			}
 			if (rev)
 			{
+				std::swap(left, right);
+				std::swap(lval, rval);
+				std::swap(linc, rinc);
+				std::swap(ldec, rdec);
 				if (left)
 					left->upd_rev();
 				if (right)
@@ -236,6 +236,7 @@ namespace cartesian_tree
 
 	inline ll sum_query(treap T)
 	{
+		T->push();
 		return T ? T->sum : 0;
 	}
 
@@ -255,11 +256,13 @@ namespace cartesian_tree
 
 	inline void assign_query(treap T, ll x)
 	{
+		T->push();
 		T->upd_assign(x);
 	}
 
 	inline void add_query(treap T, ll x)
 	{
+		T->push();
 		T->upd_add(x);
 	}
 
@@ -293,6 +296,7 @@ namespace cartesian_tree
 		split(R, A, B, C, pos, pos);
 		merge(A, L, C, R);
 		L = B;
+		L->recalc();
 	}
 
 	inline void next_permutation(treap &T)
@@ -329,6 +333,7 @@ namespace cartesian_tree
 
 	inline void query(treap &T, int t, int pos, int l, int r, ll x)
 	{
+		if (l > r) std::swap(l, r);
 		++l, ++r, ++pos;
 		ll res;
 		if (t == 2)
@@ -380,17 +385,70 @@ namespace cartesian_tree
 	}
 #undef dbg
 
-	void print(treap T)
+	void print(treap T, std::vector <ll> &nums)
 	{
 		if (!T) return;
 		T->push();
 #ifdef DEBUG_MODE
 		T->dbg_output();
 #endif
-		print(T->left);
-		std::cout << T->val << ' ';
-		print(T->right);
+		print(T->left, nums);
+		nums.push_back(T->val);
+		print(T->right, nums);
 	}
+
+	struct {
+		std::vector <ll> b;
+		ll get_sum(int l, int r)
+		{
+			ll res(0);
+			for (int i(l); i <= r; ++i)
+				res += b[i];
+			return res;
+		}
+		void insert(ll x, int pos)
+		{
+			b.push_back(x);
+			for (int i(b.size() - 1); i != pos; --i)
+				std::swap(b[i], b[i - 1]);
+		}
+		void erase(int pos)
+		{
+			for (int i(pos); i < b.size() - 1; ++i)
+				std::swap(b[i], b[i + 1]);
+			b.pop_back();
+		}
+		void assign(ll x, int l, int r)
+		{
+			for (int i(l); i <= r; ++i)
+				b[i] = x;
+		}
+		void add(ll x, int l, int r)
+		{
+			for (int i(l); i <= r; ++i)
+				b[i] += x;
+		}
+		void next_permutation(int l, int r)
+		{
+			std::next_permutation(b.begin() + l, b.begin() + r);
+		}
+		void prev_permutation(int l, int r)
+		{
+			std::prev_permutation(b.begin() + l, b.begin() + r);
+		}
+		ll query(int t, int pos, int l, int r, ll x)
+		{
+			if (l > r) std::swap(l, r);
+			if (t == 1) return get_sum(l, r);
+			if (t == 2) insert(x, pos);
+			if (t == 3) erase(pos);
+			if (t == 4) assign(x, l, r);
+			if (t == 5) add(x, l, r);
+			if (t == 6) next_permutation(l, r);
+			if (t == 7) prev_permutation(l, r);
+		}
+		std::vector <ll> print() { return b; }
+	} debugger;
 }
 
 int main()
@@ -401,7 +459,9 @@ int main()
 	//using cartesian_tree::mem_alloc;
 	using cartesian_tree::print;
 	//freopen("input.txt", "r", stdin);
+
 #ifdef DEBUG_MODE
+	using cartesian_tree::debugger;
 	freopen("debug", "w", stderr);
 #endif
 	ios_base::sync_with_stdio(false);
@@ -409,29 +469,56 @@ int main()
 	cout.tie(0);
 	int n;
 	cin >> n;
+	//n = rand() % 10000;
 	node *root = 0;
 	for (int a; n; --n)
 	{
-		cin >> a;
+		//cin >> a;
+		a = rand() % 25;
+#ifdef DEBUG_MODE
+		debugger.b.push_back(a);
+#endif
 		query(root, 2, (root ? root->sz : 0) + 1, 0, 0, a);
 	}
 	int q; cin >> q;
+	//q = rand() % 100000;
 	while (q--)
 	{
 		int t, pos, l, r;
 		long long x;
-		cin >> t;
-		if (t == 2) cin >> x >> pos;
-		else if (t == 3) cin >> pos;
-		else if (t == 4 || t == 5) cin >> x >> l >> r;
-		else cin >> l >> r;
+		//cin >> t;
+		int sz = cartesian_tree::sz(root);
+		t = 1 + rand() % 7;
+		if (t == 2) x = static_cast <long long>(rand()) * rand(), pos = rand() % sz;//cin >> x >> pos;
+		else if (t == 3) pos = rand() % sz; //cin >> pos;
+		else if (t == 4 || t == 5) l = rand() % sz, r = rand() % sz, x = (long long) rand() * rand();//cin >> x >> l >> r;
+		else l = rand() % sz, r = rand() % sz;//cin >> l >> r;
 		query(root, t, pos, l, r, x);
 #ifdef DEBUG_MODE
-		print(root);
+		static vector <long long> data;
+		data.clear();
+		debugger.query(t, pos, l, r, x);
+		print(root, data);
+		if (data != debugger.b)
+		{
+			cout << "ERROR!!!" << endl;
+			for (int i(0); i < sz; ++i)
+				if (debugger.b[i] != data[i])
+				{
+					cout << i << " : " << endl;
+					cout << "treap: " << data[i] << endl;
+					cout << "debug: " << debugger.b[i] << endl;
+					cout << endl;
+				}
+			return 0;
+		}
 		cerr << "================\n";
 		cout << endl;
 #endif
 	}
-	print(root);
+	vector <long long> ans;
+	print(root, ans);
+	for (long long x : ans)
+		cout << x << ' ';
 	return 0;
 }
