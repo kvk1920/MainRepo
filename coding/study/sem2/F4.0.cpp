@@ -1,248 +1,286 @@
 #include <iostream>
-#include <cstdlib>
-#include <algorithm>
 #include <vector>
+#include <cstdlib>
 
-namespace tree
+/*
+ * 4.0.0
+ * split, merge, size recalc, write
+ * segmet split, multi merge, insert, erase
+ */
+
+class cartesian_tree
 {
-	typedef long long ll;
+private:
 
-	struct node
+	struct node_type
 	{
-		node *left, *right;
-		int y, sz;
-		ll lval, val, rval, new_val;
-		ll sum, add;
-		bool assigned, reversed;
-		int linc, rinc;
-		int ldec, rdec;
-		node(ll x) :
-			y(rand()), sz(1),
-			lval(x), val(x), rval(x),
-			sum(x), add(0),
-			assigned(false), reversed(false),
-			linc(1), rinc(1),
-			ldec(1), rdec(1)
-		{}
+		//4.0.0
+		node_type *left_child, *right_child;
+		uint32_t size, priority;
 
-		void add_x(ll x)
-		{
-			lval += x;
-			val += x;
-			rval += x;
-			sum += x * sz;
-			add += x;
-		}
+		int64_t value;//4.0.0
 
-		void assign_x(ll x)
-		{
-			lval = val = rval = new_val = x;
-			sum = x * sz;
-			add = 0;
-			assigned = true;
-			linc = rinc = ldec = rdec = sz;
-		}
-
-		void reverse()
-		{
-			std:swap(left, right);
-			std::swap(lval, rval);
-			std::swap(linc, rinc);
-			std::swap(rdec, rdec);
-			reversed ^= 1;
-		}
-
-		void push()
-		{
-			if (assigned)
-			{
-				if (left) left->assign_x(new_val);
-				if (right) right->assign_x(new_val);
-				assigned = false;
-			}
-			if (add)
-			{
-				if (left) left->add_x(add);
-				if (right) right->add_x(add);
-				add = 0;
-			}
-			if (reversed)
-			{
-				reverse = 0;
-				if (left) left->reverse();
-				if (right) right->reverse();
-			}
-		}
-
-		void recalc()
-		{
-			push();
-			sz = 1;
-			lval = rval = val;
-			sum = val;
-			if (left)
-			{
-				sz += left->sz;
-				lval = left->lval;
-				sum += left->sum;
-			}
-			if (right)
-			{
-				sz += right->sz;
-				rval = right->rval;
-				sum += right->sum;
-			}
-			if (left)
-			{
-				linc = left->linc;
-				if (left->sz == linc && val >= left->rval)
-					++linc;
-				ldec = left->ldec;
-				if (left->sz == ldec && val <= left->rval)
-					++ldec;
-			} else linc = ldec = 1;
-			if (right)
-			{
-				if (linc == sz - right->sz && right->lval >= val)
-					linc += right->linc;
-				if (ldec == sz - right->sz && right->lval <= val)
-					ldec += right->ldec;
-			}
-			if (right)
-			{
-				rinc = right->rinc;
-				if (right->sz == rinc && val <= right->lval) ++rinc;
-				rdec = right->rdec;
-				if (right->sz == rdec && val >= right->lval) ++rdec;
-			} else rdec = rinc = 1;
-			if (left)
-			{
-				if (rinc == sz - left->sz && left->rval <= val)
-					rinc += left->rinc;
-				if (rdec == sz - left->sz && left->rval >= val)
-					rdec += left->rdec;
-			}
-			/*int y, sz;
-			ll lval, val, rval, new_val;
-			ll sum, add;
-			bool assigned, reversed;
-			int linc, rinc;
-			int ldec, rdec;*/
-		}
+		//4.0.0
+		node_type(int64_t);
+		void push();
+		void recalc();
+		void recalc_size();//4.0.0
 	};
 
-	typedef node *treap;
+	mutable node_type *root;
 
-	inline int sz(treap T) { return T ? T->sz : 0; }
+	//4.0.0
+	uint32_t size(node_type *) const;
 
-	void split(treap T, treap &L, treap &R, int k)
+	void write_node(node_type *, std::vector <int64_t> &) const;
+
+	void delete_node(node_type *);
+
+	void split(node_type *, node_type *(&), node_type *(&), uint32_t) const;
+
+	void merge(node_type *, node_type *, node_type *(&)) const;//4.0.0
+
+	void merge(node_type *, node_type *, node_type *, node_type *(&)) const;
+
+	void split(node_type *, node_type *(&), node_type *(&), node_type *(&), uint32_t, uint32_t) const;//4.0.0
+
+public:
+	//4.0.0
+	cartesian_tree(const std::vector <int64_t> &);
+
+	~cartesian_tree();
+
+	void write_tree(std::vector <int64_t> &) const;
+
+	void insert(int64_t, uint32_t);
+
+	void erase(uint32_t);//4.0.0
+};
+
+
+//4.0.0-----------------------------------------------------------------------
+cartesian_tree::node_type::node_type(int64_t value) :
+	left_child(nullptr), right_child(nullptr),
+	size(1), priority(rand()),
+	value(value)
+{}
+
+void cartesian_tree::node_type::push() {}
+
+void cartesian_tree::node_type::recalc()
+{
+	recalc_size();
+}
+
+void cartesian_tree::node_type::recalc_size()
+{
+	size = 1;
+	if (left_child != nullptr)
+		size += left_child->size;
+	if (right_child != nullptr)
+		size += right_child->size;
+}
+
+cartesian_tree::cartesian_tree(const std::vector<int64_t> &data)
+{
+	root = nullptr;
+	for (int64_t value : data)
+		merge(root, new node_type(value), root);
+}
+
+cartesian_tree::~cartesian_tree()
+{
+	delete_node(root);
+}
+
+uint32_t cartesian_tree::size(node_type *node) const
+{
+	return node == nullptr ? 0U : node->size;
+}
+
+void cartesian_tree::write_node(node_type *node, std::vector <int64_t> &data) const
+{
+	if (node == nullptr)
+		return;
+	write_node(node->left_child, data);
+	data.push_back(node->value);
+	write_node(node->right_child, data);
+}
+
+void cartesian_tree::write_tree(std::vector<int64_t> &data) const
+{
+	data.clear();
+	write_node(root, data);
+}
+
+void cartesian_tree::delete_node(node_type *node)
+{
+	if (node == nullptr)
+		return;
+	delete_node(node->left_child);
+	delete_node(node->right_child);
+	delete node;
+}
+
+void cartesian_tree::split(node_type *T, node_type *&L, node_type *&R, uint32_t k) const
+{
+	if (T == nullptr)
 	{
-		if (!T) { L = R = 0; return; }
-		T->push();
-		if (sz(T->left) + 1 <= k)
+		L = R = nullptr;
+		return;
+	}
+	T->push();
+	if (size(T->left_child) >= k)
+	{
+		split(T->left_child, L, T->left_child, k);
+		R = T;
+	}
+	else
+	{
+		split(T->right_child, T->right_child, R, k - 1 - size(T->left_child));
+		L = T;
+	}
+	T->recalc();
+}
+
+void cartesian_tree::merge(node_type *L, node_type *R, node_type *&T) const
+{
+	if (L == nullptr || R == nullptr)
+	{
+		T = L == nullptr ? R : L;
+		return;
+	}
+	L->push();
+	R->push();
+	if (L->priority > R->priority)
+	{
+		merge(L->right_child, R, L->right_child);
+		T = L;
+	}
+	else
+	{
+		merge(L, R->left_child, R->left_child);
+		T = R;
+	}
+	T->recalc();
+}
+
+void cartesian_tree::split(node_type *T, node_type *&L, node_type *&M, node_type *&R, uint32_t l, uint32_t r) const
+{
+	split(T, M, R, r);
+	split(M, L, M, l - 1);
+}
+
+void cartesian_tree::merge(node_type *L, node_type *M, node_type *R, node_type *&T) const
+{
+	merge(L, M, M);
+	merge(M, R, T);
+}
+
+void cartesian_tree::insert(int64_t value, uint32_t position)
+{
+	node_type *L, *R;
+	split(root, L, R, position - 1);
+	merge(L, new node_type(value), R, root);
+}
+
+void cartesian_tree::erase(uint32_t position)
+{
+	node_type *L, *M, *R;
+	split(root, L, M, R, position, position);
+	delete_node(M);
+	merge(L, R, root);
+}
+//4.0.0-----------------------------------------------------------------------
+
+#define DEBUG_MODE
+void solve()
+{
+	std::ios_base::sync_with_stdio(false);
+	//std::cin.tie(0);
+	//std::cout.tie(0);
+
+	uint32_t n;
+	std::cin >> n;
+	std::vector <int64_t> input(n), output;
+	for (int64_t &x : input)
+		std::cin >> x;
+
+	cartesian_tree array(input);
+#ifdef DEBUG_MODE
+	array.write_tree(output);
+	for (int64_t x : output)
+		std::cout << x << ' ';
+	std::cout << '\n';
+#endif
+	uint32_t q;
+	std::cin >> q;
+	int64_t x;
+	uint32_t t, pos, l, r;
+	for (uint32_t counter(0); counter < q; ++counter)
+	{
+		std::cin >> t;
+		if (t == 1)
 		{
-			split(T->right, T->right, R, k - 1 - sz(T->left));
-			L = T;
+			std::cin >> l >> r;
+			++l, ++r;
+			std::cout << array.sum(l, r) << '\n';
 		}
-		else
+		if (t == 2)
 		{
-			split(T->left, L, T->left, k);
-			R = T;
+			std::cin >> x >> pos;
+			++pos;
+			array.insert(x, pos);
 		}
-		T->recalc();
-	}
-
-	inline void split(treap T, treap &L, treap &M, treap &R, int l, int r)
-	{
-		split(T, M, R, r);
-		split(M, L, M, l - 1);
-	}
-
-	void merge(treap L, treap R, treap &T)
-	{
-		if (!L || !R) { T = L ? L : R; if (T) T->push(); return; }
-		L->push();
-		R->push();
-		if (L->y >= R->y)
+		if (t == 3)
 		{
-			merge(L->right, R, L->right);
-			T = L;
+			std::cin >> pos;
+			++pos;
+			array.erase(pos);
 		}
-		else
+		if (t == 4)
 		{
-			merge(L, R->left, R->left);
-			T = R;
+			std::cin >> x >> l >> r;
+			++l, ++r;
+			array.assign(x, l, r);
 		}
-		T->recalc();
+		if (t == 5)
+		{
+			std::cin >> x >> l >> r;
+			++l, ++r;
+			array.add(x, l, r);
+		}
+		if (t == 6 || t == 7)
+		{
+			std::cin >> l >> r;
+			++l, ++r;
+			if (t == 6)
+				array.next_permutation(l, r);
+			else
+				array.prev_permutation(l, r);
+		}
+		if (t == 8)
+		{
+			std::cin >> l >> r;
+			++l, ++r;
+			array.reverse(l, r);
+		}
+#ifdef DEBUG_MODE
+		array.write_tree(output);
+		for (int64_t a : output)
+			std::cout << a << ' ';
+		std::cout << '\n';
+#endif
 	}
+	array.write_tree(output);
+	for (int64_t a : output)
+		std::cout << a << ' ';
+	std::cout << '\n';
+}
+#undef DEBUG_MODE
 
-	inline void merge(treap L, treap M, treap R, treap &T)
-	{
-		merge(L, M, M);
-		merge(M, R, T);
-	}
-
-	inline void reverse_query(treap &T)
-	{
-		T->reverse();
-	}
-
-	ll sum_query(treap &T)
-	{
-		return T->sum;
-	}
-
-	inline void insert_query(treap &T, ll x, int pos)
-	{
-		treap L, R;
-		split(T, L, R, pos - 1);
-		merge(L, new node(x), R, T);
-	}
-
-	inline void erase_query(treap &T, int pos)
-	{
-		treap L, D, R;
-		split(T, L, D, R, pos, pos);
-		merge(L, R, T);
-	}
-
-	inline void add_query(treap T, ll x)
-	{
-		T->add_x(x);
-	}
-
-	inline void assign_query(treap T, ll x)
-	{
-		T->assign_x(x);
-	}
-
-	int find_greater_pos(treap T, ll x)
-	{
-		T->push();
-		if (T->right && T->right->lval > x)
-			return sz(T->left) + 1 + find_greater_pos(T->right, x);
-		if (T->val > x)
-			return sz(T->left) + 1;
-		return find_greater_pos(T->left, x);
-	}
-
-	int find_less_pos(treap T, ll x)
-	{
-		T->push();
-		if (T->right && T->right->lval < x)
-			return sz(T->left) + 1 + find_less_pos(T->right, x);
-		if (T->val < x)
-			return 1 + sz(T->left);
-		return find_less_pos(T->left, x);
-	}
-
-	inline void swap(treap &L, treap &R, int pos)
-	{
-		treap A, B, C;
-		split(R, A, B, C, pos, pos);
-		merge(A, L, C, R);
-		L = B;
-	}
-
-
+int main()
+{
+	solve();
+	return 0;
 }
