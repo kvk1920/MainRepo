@@ -10,31 +10,14 @@
 class Treap {
 private:
   typedef long long Int64;
-  /*
-   * Все функции, которые не работают с конкретным объектом Treap,
-   * должны быть static
-   */
   static const size_t kLeft = 0, kRight = 1;
   static size_t GetAnotherDirection(size_t);
-  /*
-   * Избавление от магических констант, показывающих направление.
-   * Да, делать another_direction = direction ^ 1 в явном виде в коде нельзя,
-   * надо подобные штуки через функцию.
-   */
   static size_t GetRandomNumber();
-  /*
-   * Вроде можно генератор рандома обернуть в класс, но на это Ф.Д.
-   * не особо смотрел.
-   */
   struct Node {
-    /*
-     * Структура, потому что хранит данные и ничего не делает,
-     * но вроде это тоже не важно.
-     */
-    Node *child[2]; // Чтобы одинаково всё делать для L и R
+    Node *child[2];
     size_t size;
     size_t priority;
-    size_t no_increment_affix_length[2];//0 - префикс, 1 - суффикс
+    size_t no_increment_affix_length[2];
     size_t no_decrement_affix_length[2];
     Int64 value;
     Int64 new_value;
@@ -46,30 +29,24 @@ private:
     explicit Node(Int64);
   };
   typedef Node *NodePtr;
-  /*
-   * Внутри класса такой typedef можно
-   * ATTENTION!!! Не стоит делать typedef std::shared_ptr <Node>,
-   * они долгие и получают TL
-   */
-  static void RemoveNode(NodePtr &);//Чтобы спрятать вызов delete
-  template <typename ...args>//и new. Переменное число аргументов - чтобы не
-  static void AllocNode(NodePtr &, args...);//пришлось чего менять при
-  //изменении конструктора Node
+  static void RemoveNode(NodePtr &);
+  template <typename ...args>
+  static void AllocNode(NodePtr &, args...);
   static size_t Size(NodePtr);
   static void Assign(NodePtr, Int64);
   static void Add(NodePtr, Int64);
   template <typename T>
-  static void Swap(T *);//Оно сделало код короче
+  static void Swap(T *);
   static void Reverse(NodePtr);
   static void Push(NodePtr);
-  static size_t PartialSize(NodePtr, size_t); // Левое или правое поддерево + 1
-  template <typename Comparator>//Это просто для избавления от одной копипасты
+  static size_t PartialSize(NodePtr, size_t);
+  template <typename Comparator>
   static void FirstStepOfAffixUpdating(NodePtr, NodePtr, size_t &, size_t,
                                        size_t, Comparator);
   template <typename Comparator>
   static void SecondStepOfAffixUpdating(NodePtr, NodePtr, size_t &, size_t,
                                  size_t, Comparator);
-  static void Recalculate(NodePtr);//Не Recalc, сокращения слов - плохо
+  static void Recalculate(NodePtr);
   static void Merge(NodePtr, NodePtr, NodePtr &);
   static void Split(NodePtr, NodePtr &, NodePtr &, size_t);
   static void MultiMerge(NodePtr, NodePtr, NodePtr, NodePtr &);
@@ -85,21 +62,20 @@ private:
   enum class PermutationType : bool { kNextPermutation, kPrevPermutation };
   template <PermutationType flag>
   static void PermutationOnSegment(NodePtr &);
-  template <typename ReturnType, class Function>//Делает Function на отрезке
+  template <typename ReturnType, class Function>
   static ReturnType DoOperation(NodePtr &, size_t, size_t, Function);
   template <class Function>
   static void DfsInOrder(NodePtr, Function);
   template <class Function>
   static void DfsPostOrder(NodePtr, Function);
-  class Subsegment { ///Этот класс позволяет работать с подотрезком,
-  private:/// не заботясь о том, будет ли он вставлен обратно
-    NodePtr &all_segment_;///Т.е. это просто обёртка вокруг GetSegment()
+  class Subsegment {
+  private:
+    NodePtr &all_segment_;
     NodePtr left_, target_subsegment_, right_;
   public:
     explicit Subsegment(NodePtr &, size_t, size_t);
     ~Subsegment();
     operator NodePtr &();
-    //explicit operator NodePtr(); ///Во избежание неоднозначности
     Node &operator*();
     NodePtr operator->();
   };
@@ -111,7 +87,7 @@ public:
   template <typename IteratorType>
   explicit Treap(IteratorType, IteratorType);
   template <typename IteratorType>
-  void GetArray(IteratorType);//Не важно, куда выводить дерево
+  void GetArray(IteratorType);
   Int64 Sum(size_t, size_t);
   void Insert(Int64, size_t);
   void Erase(size_t);
@@ -695,23 +671,14 @@ struct InputData
       delete queries[i];
   }
 };
-//Возвращает структурку векторов, тут всё ОК.
+
 InputData GlobalRead(std::istream &in)
-{//Ну RVO, за подробностями наерное к Мещерину
+{
   InputData result;
   result.array = ReadArray(in);
   result.queries = ReadQueries(in);
   return result;
 }
-
-/*
- * Если кратко:
- * Если переменная создана внутри функции и возвращается функцей,
- * то умный компилятор создаёт эту переменную ровно там, куда она будет
- * возвращена. Иными словами это эквивалентно такому коду:
- * InputData input;
- * GlobalRead(InputData &...
- */
 
 struct OutputData
 {
@@ -730,27 +697,19 @@ template <class Array>
 OutputData Solution(const InputData &input) {
   OutputData output;
   Array container(std::begin(input.array), std::end(input.array));
-  for (Query *query : input.queries)//А вот тут очень удобные итераторы
+  for (Query *query : input.queries)
     Process(query, container, std::back_inserter(output.answers));
   container.GetArray(std::back_inserter(output.array));
   return output;
 }
 
-/*
- * В функции решения(здесь - GlobalSolution) должны быть:
- * 1) Считывание данных
- * 2) Обработка(запуск решения задачи)
- * 3) Вывод данных
- * Т.е. вызов трёх функций
- */
 template <class Array>
 void GlobalSolution(std::istream &in, std::ostream &out)
-{//А, ещё. Важно, чтобы не через cin всё. Т.е. чтоб с любыми потоками можно.
+{
   GlobalWrite(Solution<Array>(GlobalRead(in)), out);
 }
 
 int main() {
-  //freopen("input.txt", "r", stdin);
   std::ios_base::sync_with_stdio(false);
   GlobalSolution <Treap>(std::cin, std::cout);
 }
