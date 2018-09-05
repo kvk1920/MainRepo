@@ -2,6 +2,10 @@
 
 using namespace std;
 
+/**
+* It's horrible Singletone Implementation.
+* The task was to make the most horrible singletone.
+*/
 class Singletone
 {
 public:
